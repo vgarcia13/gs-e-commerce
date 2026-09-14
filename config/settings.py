@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "accounts",
     "catalog",
     "importing",
+    "ordering",
 ]
 
 MIDDLEWARE = [
@@ -51,6 +52,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "ordering.context_processors.cart_summary",
             ],
         },
     },

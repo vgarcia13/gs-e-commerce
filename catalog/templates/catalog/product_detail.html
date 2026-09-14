@@ -17,7 +17,19 @@
     <p class="stock out">Out of stock</p>
     {% endif %}
 
-    {% block purchase %}{% endblock %}
+    {% if product.is_available %}
+        {% if user.is_authenticated %}
+        <form method="post" action="{% url 'ordering:add' product.pk %}" class="add-to-cart">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <label for="quantity">Quantity</label>
+            <input id="quantity" type="number" name="quantity" value="1" min="1" max="{{ product.stock }}">
+            <button type="submit">Add to cart</button>
+        </form>
+        {% else %}
+        <p><a class="button" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Log in to buy</a></p>
+        {% endif %}
+    {% endif %}
 
     <p><a href="{% url 'catalog:product_list' %}">Back to products</a></p>
 </article>
