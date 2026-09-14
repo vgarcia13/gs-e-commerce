@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "catalog",
+    "importing",
 ]
 
 MIDDLEWARE = [
@@ -91,8 +92,19 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "formatters": {
+        "standard": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+    },
+    "root": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO").upper()},
     "loggers": {
         "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
     },
