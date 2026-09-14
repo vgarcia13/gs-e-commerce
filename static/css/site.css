@@ -372,3 +372,11 @@ main {
 .staff-table .sku { display: block; }
 
 .cart-actions { margin-top: 1rem; }
+
+.checkout-form { margin-top: 1.5rem; margin-left: 0; }
+
+.cart-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}

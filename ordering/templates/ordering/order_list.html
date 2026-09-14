@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Your orders{% endblock %}
+
+{% block content %}
+<h1>Your orders</h1>
+
+{% if orders %}
+<div class="table-scroll">
+    <table class="staff-table">
+        <thead><tr><th>Reference</th><th>Placed</th><th>Items</th><th>Total</th></tr></thead>
+        <tbody>
+        {% for order in orders %}
+        <tr>
+            <td><a href="{% url 'orders:order_detail' order.reference %}">{{ order.reference }}</a></td>
+            <td>{{ order.created_at|date:"j M Y, H:i" }}</td>
+            <td>{{ order.item_count }}</td>
+            <td>{{ order.total }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="empty">You have not placed any orders yet.</p>
+{% endif %}
+{% endblock %}

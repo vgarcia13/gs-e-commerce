@@ -1,11 +1,15 @@
+import uuid
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
-from django.views.generic import TemplateView
+from django.views.generic import DetailView, FormView, ListView, TemplateView
 
 from catalog.models import Product
 from ordering import services
+from ordering.forms import CheckoutForm
+from ordering.models import Order
 
 
 class CartView(LoginRequiredMixin, TemplateView):
@@ -63,3 +67,48 @@ class RemoveCartItemView(CartActionView):
         services.remove_item(request.user, product)
         messages.success(request, f"Removed {product.name} from your cart.")
         return self.redirect_back()
+
+
+class CheckoutView(LoginRequiredMixin, FormView):
+    form_class = CheckoutForm
+    template_name = "ordering/checkout.html"
+
+    def get_initial(self):
+        return {**super().get_initial(), "idempotency_key": uuid.uuid4()}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cart"] = services.get_cart(self.request.user)
+        return context
+
+    def form_valid(self, form):
+        try:
+            order = services.place_order(
+                self.request.user,
+                form.cleaned_data["card_number"],
+                form.cleaned_data["idempotency_key"],
+            )
+        except services.CheckoutError as error:
+            messages.error(self.request, str(error))
+            return redirect("ordering:cart")
+        messages.success(self.request, f"Order {order.reference} placed.")
+        return redirect("orders:order_detail", reference=order.reference)
+
+
+class OrderListView(LoginRequiredMixin, ListView):
+    template_name = "ordering/order_list.html"
+    context_object_name = "orders"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).prefetch_related("items")
+
+
+class OrderDetailView(LoginRequiredMixin, DetailView):
+    template_name = "ordering/order_detail.html"
+    context_object_name = "order"
+    slug_field = "reference"
+    slug_url_kwarg = "reference"
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).prefetch_related("items")

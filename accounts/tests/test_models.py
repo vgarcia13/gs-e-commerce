@@ -60,3 +60,9 @@ def test_str_is_the_email():
     user = User.objects.create_user(email="buyer@example.com", password="s3cret-pass-99")
 
     assert str(user) == "buyer@example.com"
+
+
+def test_project_settings_do_not_weaken_password_hashing():
+    import config.settings as project_settings
+
+    assert not hasattr(project_settings, "PASSWORD_HASHERS")

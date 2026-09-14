@@ -43,6 +43,7 @@
 </div>
 
 <p class="cart-actions">
+    <a class="button" href="{% url 'ordering:checkout' %}">Checkout</a>
     <a href="{% url 'catalog:product_list' %}">Continue shopping</a>
 </p>
 {% else %}
