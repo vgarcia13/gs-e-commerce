@@ -199,3 +199,95 @@ main {
     color: var(--muted);
     font-size: 0.8rem;
 }
+
+.staff-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--accent);
+    border-radius: 4px;
+    color: #fff;
+    text-decoration: none;
+}
+
+.staff-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.9rem;
+}
+
+.staff-table th, .staff-table td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+}
+
+.staff-table th { background: var(--page); font-weight: 600; }
+
+.staff-table .row-deleted td { color: var(--muted); font-style: italic; }
+
+.staff-table .actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.staff-table .actions form { margin: 0; }
+
+.messages {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+
+.messages li {
+    padding: 0.6rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    background: #e8f0f7;
+    border: 1px solid #c5d9ea;
+}
+
+.messages li.success {
+    background: #e6f3ea;
+    border-color: #bcdcc7;
+    color: #1f6b3a;
+}
+
+.messages li.warning {
+    background: #fdf3e0;
+    border-color: #eed9ab;
+    color: #7a5312;
+}
+
+.messages li.error {
+    background: #f9e9e5;
+    border-color: #e6c3b9;
+    color: var(--warn);
+}
+
+.error-page {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.5rem;
+    max-width: 34rem;
+    margin: 0 auto;
+}
+
+.error-page h1 { margin-top: 0; }
+
+.table-scroll { overflow-x: auto; }

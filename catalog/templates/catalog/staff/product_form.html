@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}{% if form.instance.pk %}Edit product{% else %}New product{% endif %}{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>{% if form.instance.pk %}Edit {{ form.instance.sku }}{% else %}New product{% endif %}</h1>
+    {% if form.instance.pk %}
+    <p class="helptext">Stock is changed through the stock adjustment action, not this form.</p>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+    <p><a href="{% url 'catalog_staff:product_list' %}">Back to products</a></p>
+</section>
+{% endblock %}

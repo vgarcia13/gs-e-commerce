@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ product.sku }}{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>Delete {{ product.sku }}?</h1>
+    <p>{{ product.name }} will be hidden from the catalogue. It can be restored later.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Delete</button>
+    </form>
+    <p><a href="{% url 'catalog_staff:product_list' %}">Cancel</a></p>
+</section>
+{% endblock %}

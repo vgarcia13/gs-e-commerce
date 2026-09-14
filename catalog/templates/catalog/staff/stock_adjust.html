@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Adjust stock for {{ product.sku }}{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>Adjust stock</h1>
+    <p>{{ product.name }} ({{ product.sku }}) currently has {{ product.stock }} in stock.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Apply</button>
+    </form>
+    <p><a href="{% url 'catalog_staff:product_list' %}">Back to products</a></p>
+</section>
+{% endblock %}

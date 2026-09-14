@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found{% endblock %}
+
+{% block content %}
+<section class="error-page">
+    <h1>Page not found</h1>
+    <p>That page does not exist, or the product it referred to is no longer available.</p>
+    <p><a href="{% url 'catalog:product_list' %}">Back to products</a></p>
+</section>
+{% endblock %}

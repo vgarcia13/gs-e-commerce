@@ -11,6 +11,7 @@
     <a class="brand" href="{% url 'catalog:product_list' %}">Store</a>
     <nav class="site-nav">
         {% if user.is_authenticated %}
+            {% if user.is_staff %}<a href="{% url 'catalog_staff:product_list' %}">Manage products</a>{% endif %}
             <span class="current-user">{{ user.email }}</span>
             <form method="post" action="{% url 'accounts:logout' %}">
                 {% csrf_token %}
@@ -24,6 +25,11 @@
     </nav>
 </header>
 <main>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
     {% block content %}{% endblock %}
 </main>
 </body>
