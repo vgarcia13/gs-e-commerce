@@ -1,0 +1,30 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Store{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" href="{% url 'catalog:product_list' %}">Store</a>
+    <nav class="site-nav">
+        {% if user.is_authenticated %}
+            <span class="current-user">{{ user.email }}</span>
+            <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="link-button">Log out</button>
+            </form>
+        {% else %}
+            <a href="{% url 'accounts:login' %}">Log in</a>
+            <a href="{% url 'accounts:signup' %}">Sign up</a>
+        {% endif %}
+        {% block nav %}{% endblock %}
+    </nav>
+</header>
+<main>
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

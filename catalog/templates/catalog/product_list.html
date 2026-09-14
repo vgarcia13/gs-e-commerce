@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<form class="search" method="get" action="{% url 'catalog:product_list' %}">
+    {{ form.q }}
+    {{ form.category }}
+    <label class="checkbox">{{ form.in_stock }} {{ form.in_stock.label }}</label>
+    <button type="submit">Search</button>
+</form>
+
+<p class="result-count">{{ page_obj.paginator.count }} product{{ page_obj.paginator.count|pluralize }}</p>
+
+{% if products %}
+<ul class="product-grid">
+    {% for product in products %}
+    <li class="product-card">
+        <a href="{% url 'catalog:product_detail' product.pk %}">{{ product.name }}</a>
+        <p class="sku">{{ product.sku }}</p>
+        <p class="category">{{ product.category }}</p>
+        <p class="price">{{ product.price }}</p>
+        {% if product.is_available %}
+        <p class="stock">{{ product.stock }} in stock</p>
+        {% else %}
+        <p class="stock out">Out of stock</p>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty">No products match your search.</p>
+{% endif %}
+
+{% if page_obj.has_other_pages %}
+<nav class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?{% if request.GET.q %}q={{ request.GET.q|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?{% if request.GET.q %}q={{ request.GET.q|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

@@ -2,9 +2,34 @@ from django.db import models
 from django.db.models import Q
 
 
-class AvailableProductManager(models.Manager):
+class ProductQuerySet(models.QuerySet):
+    def available(self):
+        return self.filter(deleted_at__isnull=True)
+
+    def in_stock(self):
+        return self.filter(stock__gt=0)
+
+    def in_category(self, category: str):
+        category = (category or "").strip()
+        if not category:
+            return self
+        return self.filter(category__iexact=category)
+
+    def search(self, term: str):
+        term = (term or "").strip()
+        if not term:
+            return self
+        return self.filter(
+            Q(name__icontains=term)
+            | Q(description__icontains=term)
+            | Q(sku__icontains=term)
+            | Q(category__icontains=term)
+        )
+
+
+class AvailableProductManager(models.Manager.from_queryset(ProductQuerySet)):
     def get_queryset(self):
-        return super().get_queryset().filter(deleted_at__isnull=True)
+        return super().get_queryset().available()
 
 
 class Product(models.Model):
@@ -19,7 +44,7 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    objects = models.Manager()
+    objects = models.Manager.from_queryset(ProductQuerySet)()
     available = AvailableProductManager()
 
     class Meta:

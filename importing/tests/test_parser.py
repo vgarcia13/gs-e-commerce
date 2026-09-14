@@ -173,3 +173,53 @@ def test_overlong_name_is_rejected():
     result = parse(csv_bytes(f"{'x' * 201},LN-001,Item,Tools,1.00,1,0.1"))
 
     assert [e.field for e in result.errors] == ["name"]
+
+
+CRLF_HEADER = "name,sku,description,category,price,stock,weight_kg\r\n"
+
+
+def crlf_bytes(*rows: str) -> bytes:
+    return (CRLF_HEADER + "".join(row + "\r\n" for row in rows)).encode("utf-8")
+
+
+def test_crlf_line_endings_parse_without_errors():
+    result = parse(crlf_bytes("Running Shoes,RS-001,Light shoes,Footwear,89.99,150,0.35"))
+
+    assert result.errors == []
+    row = result.rows[0]
+    assert row.sku == "RS-001"
+    assert row.price == Decimal("89.99")
+    assert row.stock == 150
+    assert row.weight_kg == Decimal("0.35")
+
+
+def test_carriage_return_does_not_leak_into_the_last_column():
+    data = (
+        "name,sku,category,price,stock,weight_kg,description\r\n"
+        "Running Shoes,RS-001,Footwear,89.99,150,0.35,Light shoes\r\n"
+    ).encode("utf-8")
+
+    result = parse(data)
+
+    assert result.errors == []
+    assert result.rows[0].description == "Light shoes"
+
+
+def test_blank_final_field_in_crlf_file_is_missing_not_empty_text():
+    result = parse(crlf_bytes("Gaming Keyboard,GK-088,Keyboard,Electronics,79.99,60,"))
+
+    assert result.errors == []
+    assert result.rows[0].weight_kg is None
+
+
+def test_crlf_file_with_quoted_newline_keeps_source_line_numbers():
+    data = (
+        CRLF_HEADER
+        + "Running Shoes,RS-001,Light shoes,Footwear,89.99,150,0.35\r\n"
+        + 'Camping Tent,CT-005,"4-person dome,\r\nwaterproof",Outdoors,199.99,25,4.5\r\n'
+    ).encode("utf-8")
+
+    result = parse(data)
+
+    assert result.errors == []
+    assert [row.line for row in result.rows] == [2, 4]
