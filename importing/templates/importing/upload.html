@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Import products{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>Import products</h1>
+    <p class="helptext">Existing products are matched by SKU and updated. Stock is only set when a product is created.</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Import</button>
+    </form>
+    <p><a href="{% url 'catalog_staff:product_list' %}">Back to products</a></p>
+</section>
+
+{% if report %}
+<section class="import-report">
+    <h2>Import result</h2>
+    <ul class="report-counts">
+        <li>Created <strong>{{ report.created }}</strong></li>
+        <li>Updated <strong>{{ report.updated }}</strong></li>
+        <li>Restored <strong>{{ report.resurrected }}</strong></li>
+        <li>Rejected <strong>{{ report.rejected }}</strong></li>
+        <li>Blank rows skipped <strong>{{ report.blank_rows }}</strong></li>
+    </ul>
+
+    {% if report.warnings %}
+    <h3>Warnings</h3>
+    <ul class="report-list warnings">
+        {% for warning in report.warnings %}<li>{{ warning }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if report.errors %}
+    <h3>Rejected rows</h3>
+    <div class="table-scroll">
+        <table class="staff-table">
+            <thead><tr><th>Line</th><th>Field</th><th>Value</th><th>Reason</th></tr></thead>
+            <tbody>
+            {% for error in report.errors %}
+            <tr>
+                <td>{{ error.line }}</td>
+                <td>{{ error.field|default:"-" }}</td>
+                <td>{{ error.value }}</td>
+                <td>{{ error.message }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

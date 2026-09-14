@@ -5,7 +5,10 @@
 {% block content %}
 <div class="staff-header">
     <h1>Manage products</h1>
-    <a class="button" href="{% url 'catalog_staff:product_create' %}">New product</a>
+    <span class="header-actions">
+        <a href="{% url 'importing:csv_import' %}">Import from CSV</a>
+        <a class="button" href="{% url 'catalog_staff:product_create' %}">New product</a>
+    </span>
 </div>
 
 <form class="search" method="get">
