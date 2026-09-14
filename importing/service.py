@@ -3,7 +3,7 @@ import logging
 from django.db import DataError, IntegrityError, transaction
 
 from catalog.models import Product
-from importing.parser import ProductRow, parse
+from importing.parser import CsvFormatError, ProductRow, parse
 from importing.results import ImportReport, RowError, RowWarning
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,20 @@ def _upsert(row: ProductRow) -> str:
 
 def import_products(data: bytes) -> ImportReport:
     """Upserts products from CSV bytes, skipping and reporting rows that fail validation."""
-    parsed = parse(data)
+    logger.info(
+        "Product import started (%s bytes)",
+        len(data),
+        extra={"event": "import.started", "bytes": len(data)},
+    )
+    try:
+        parsed = parse(data)
+    except CsvFormatError as error:
+        logger.warning(
+            "Product import rejected the file: %s",
+            error,
+            extra={"event": "import.file_rejected", "reason": str(error)},
+        )
+        raise
     report = ImportReport(blank_rows=parsed.blank_rows)
     report.errors.extend(parsed.errors)
     report.warnings.extend(parsed.warnings)
@@ -85,7 +98,12 @@ def import_products(data: bytes) -> ImportReport:
             with transaction.atomic():
                 outcome = _upsert(row)
         except (IntegrityError, DataError) as error:
-            logger.exception("Database rejected line %s (SKU %s)", row.line, row.sku)
+            logger.exception(
+                "Database rejected line %s (SKU %s)",
+                row.line,
+                row.sku,
+                extra={"event": "import.row_failed", "line": row.line, "sku": row.sku},
+            )
             report.errors.append(
                 RowError(
                     line=row.line,
@@ -104,8 +122,20 @@ def import_products(data: bytes) -> ImportReport:
         report.resurrected,
         report.rejected,
         report.blank_rows,
+        extra={
+            "event": "import.completed",
+            "products_created": report.created,
+            "products_updated": report.updated,
+            "products_resurrected": report.resurrected,
+            "rows_rejected": report.rejected,
+            "rows_blank": report.blank_rows,
+        },
     )
     if report.errors:
-        logger.warning("Product import rejected %s row(s)", report.rejected)
+        logger.warning(
+            "Product import rejected %s row(s)",
+            report.rejected,
+            extra={"event": "import.rows_rejected", "rows_rejected": report.rejected},
+        )
 
     return report

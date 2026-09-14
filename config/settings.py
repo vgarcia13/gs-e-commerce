@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "config.middleware.RequestIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -98,19 +99,27 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+LOG_FORMAT = os.environ.get("DJANGO_LOG_FORMAT", "text").lower()
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {"()": "config.logging.RequestIdFilter"},
+    },
     "formatters": {
-        "standard": {
-            "format": "{asctime} {levelname} {name} {message}",
+        "text": {
+            "()": "config.logging.TextFormatter",
+            "format": "{asctime} {levelname} {name} [{request_id}] {message}",
             "style": "{",
         },
+        "json": {"()": "config.logging.JsonFormatter"},
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "standard",
+            "formatter": "json" if LOG_FORMAT == "json" else "text",
+            "filters": ["request_id"],
         },
     },
     "root": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO").upper()},

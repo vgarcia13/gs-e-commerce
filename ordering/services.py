@@ -53,7 +53,19 @@ def add_to_cart(user, product: Product, quantity: int = 1) -> CartItem:
         else:
             item.quantity = wanted
             item.save(update_fields=["quantity"])
-    logger.info("Cart for user %s now holds %s of %s", user.pk, item.quantity, product.sku)
+    logger.info(
+        "Cart for user %s now holds %s of %s",
+        user.pk,
+        item.quantity,
+        product.sku,
+        extra={
+            "event": "cart.item_added",
+            "actor_id": user.pk,
+            "product_id": product.pk,
+            "sku": product.sku,
+            "quantity": item.quantity,
+        },
+    )
     return item
 
 
@@ -68,12 +80,35 @@ def set_quantity(user, product: Product, quantity: int) -> CartItem:
         _check_available(product, quantity)
         item.quantity = quantity
         item.save(update_fields=["quantity"])
+    logger.info(
+        "Cart for user %s set to %s of %s",
+        user.pk,
+        quantity,
+        product.sku,
+        extra={
+            "event": "cart.item_updated",
+            "actor_id": user.pk,
+            "product_id": product.pk,
+            "sku": product.sku,
+            "quantity": quantity,
+        },
+    )
     return item
 
 
 def remove_item(user, product: Product) -> None:
     CartItem.objects.filter(cart__user=user, product=product).delete()
-    logger.info("Removed %s from cart for user %s", product.sku, user.pk)
+    logger.info(
+        "Removed %s from cart for user %s",
+        product.sku,
+        user.pk,
+        extra={
+            "event": "cart.item_removed",
+            "actor_id": user.pk,
+            "product_id": product.pk,
+            "sku": product.sku,
+        },
+    )
 
 
 def _reference_for(order: Order) -> str:
@@ -84,13 +119,28 @@ def place_order(user, card_number: str, idempotency_key: uuid.UUID) -> Order:
     """Charges the cart and records the order, rolling back stock if the payment is declined."""
     existing = Order.objects.filter(idempotency_key=idempotency_key).first()
     if existing is not None:
-        logger.info("Reusing order %s for repeated idempotency key", existing.reference)
+        logger.info(
+            "Reusing order %s for a repeated idempotency key",
+            existing.reference,
+            extra={
+                "event": "checkout.idempotent_replay",
+                "actor_id": user.pk,
+                "order_reference": existing.reference,
+            },
+        )
         return existing
 
     cart = get_cart(user)
     items = list(cart.items.select_related("product"))
     if not items:
         raise CheckoutError("Your cart is empty.")
+
+    logger.info(
+        "Checkout started by user %s with %s line(s)",
+        user.pk,
+        len(items),
+        extra={"event": "checkout.started", "actor_id": user.pk, "lines": len(items)},
+    )
 
     try:
         with transaction.atomic():
@@ -104,6 +154,18 @@ def place_order(user, card_number: str, idempotency_key: uuid.UUID) -> Order:
                     pk=product.pk, stock__gte=item.quantity
                 ).update(stock=F("stock") - item.quantity)
                 if not claimed:
+                    logger.warning(
+                        "Checkout for user %s refused: not enough stock for %s",
+                        user.pk,
+                        product.sku,
+                        extra={
+                            "event": "checkout.stock_unavailable",
+                            "actor_id": user.pk,
+                            "product_id": product.pk,
+                            "sku": product.sku,
+                            "requested": item.quantity,
+                        },
+                    )
                     raise CheckoutError(f"There is not enough stock for {product.name}.")
                 total += product.price * item.quantity
                 lines.append(
@@ -132,7 +194,17 @@ def place_order(user, card_number: str, idempotency_key: uuid.UUID) -> Order:
             order.save(update_fields=["reference", "payment_reference"])
             cart.items.all().delete()
     except PaymentDeclined as declined:
-        logger.warning("Payment declined for user %s: %s", user.pk, declined)
+        logger.warning(
+            "Payment declined for user %s: %s",
+            user.pk,
+            declined,
+            extra={
+                "event": "payment.declined",
+                "actor_id": user.pk,
+                "amount": str(total),
+                "reason": str(declined),
+            },
+        )
         raise CheckoutError(str(declined)) from declined
     except IntegrityError:
         duplicate = Order.objects.filter(idempotency_key=idempotency_key).first()
@@ -140,5 +212,18 @@ def place_order(user, card_number: str, idempotency_key: uuid.UUID) -> Order:
             return duplicate
         raise
 
-    logger.info("Order %s placed by user %s for %s", order.reference, user.pk, order.total)
+    logger.info(
+        "Order %s placed by user %s for %s",
+        order.reference,
+        user.pk,
+        order.total,
+        extra={
+            "event": "order.placed",
+            "actor_id": user.pk,
+            "order_reference": order.reference,
+            "amount": str(order.total),
+            "lines": len(lines),
+            "payment_reference": order.payment_reference,
+        },
+    )
     return order

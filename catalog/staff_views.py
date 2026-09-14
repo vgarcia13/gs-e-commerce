@@ -29,8 +29,10 @@ class StaffProductCreateView(StaffRequiredMixin, CreateView):
     success_url = reverse_lazy("catalog_staff:product_list")
 
     def form_valid(self, form):
-        messages.success(self.request, f"Created {form.instance.sku}.")
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        services.record_created(self.object, self.request.user)
+        messages.success(self.request, f"Created {self.object.sku}.")
+        return response
 
 
 class StaffProductUpdateView(StaffRequiredMixin, UpdateView):
@@ -40,8 +42,10 @@ class StaffProductUpdateView(StaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("catalog_staff:product_list")
 
     def form_valid(self, form):
-        messages.success(self.request, f"Updated {form.instance.sku}.")
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        services.record_updated(self.object, self.request.user)
+        messages.success(self.request, f"Updated {self.object.sku}.")
+        return response
 
 
 class StaffProductDeleteView(StaffRequiredMixin, View):
@@ -53,7 +57,7 @@ class StaffProductDeleteView(StaffRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         product = get_object_or_404(Product, pk=kwargs["pk"], deleted_at__isnull=True)
-        services.soft_delete(product)
+        services.soft_delete(product, request.user)
         messages.success(request, f"Deleted {product.sku}.")
         return redirect("catalog_staff:product_list")
 
@@ -61,7 +65,7 @@ class StaffProductDeleteView(StaffRequiredMixin, View):
 class StaffProductRestoreView(StaffRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         product = get_object_or_404(Product, pk=kwargs["pk"], deleted_at__isnull=False)
-        if services.restore(product):
+        if services.restore(product, request.user):
             messages.success(request, f"Restored {product.sku}.")
         else:
             messages.error(
@@ -85,7 +89,7 @@ class StaffStockAdjustView(StaffRequiredMixin, FormView):
     def form_valid(self, form):
         product = self.get_product()
         delta = form.cleaned_data["delta"]
-        if not services.adjust_stock(product, delta):
+        if not services.adjust_stock(product, delta, self.request.user):
             form.add_error("delta", "Stock cannot fall below zero.")
             return self.form_invalid(form)
         messages.success(self.request, f"Stock for {product.sku} adjusted by {delta}.")
