@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ecommerce
+          POSTGRES_USER: ecommerce
+          POSTGRES_PASSWORD: ecommerce
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret-key
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pipx install poetry==2.4.3
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: poetry
+
+      - name: Install dependencies
+        run: poetry install --with dev --no-root
+
+      - name: Run tests
+        run: poetry run pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker compose build
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for the app to serve
+        run: |
+          for attempt in $(seq 1 45); do
+            if curl -fsS -o /dev/null http://localhost:8000/; then
+              echo "app responded after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "app did not respond in time"
+          docker compose logs web
+          exit 1
+
+      - name: Import the sample catalogue
+        run: docker compose run --rm web python manage.py import_products data/products.csv
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
