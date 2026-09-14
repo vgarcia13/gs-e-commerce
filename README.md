@@ -38,6 +38,28 @@ Configuration is read from environment variables. `docker compose up` supplies d
 defaults, so no `.env` file is required; `.env.example` documents every variable if you want to
 override them.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and every pull request, in two jobs:
+
+- **tests** — Python 3.10 and Poetry against a PostgreSQL service container, running the full
+  suite.
+- **docker** — builds the image, starts the stack, waits for a real HTTP 200, and imports
+  `data/products.csv` through the management command.
+
+The second job exists because "runnable as a docker container" is one of the requirements, and a
+broken `Dockerfile` would otherwise leave the test suite green while the thing a reviewer actually
+runs is broken. It exercises the whole pipeline in one step: image, migrations, static files,
+gunicorn, the database, and the parser against the real file.
+
+The tests job runs natively rather than through Compose because it is roughly three times faster
+and Poetry's cache keys cleanly on `poetry.lock`. `DJANGO_SECRET_KEY` is hardcoded in the workflow
+on purpose: it is an ephemeral CI database, so treating that value as a secret would be
+misleading.
+
+`main` is protected against force pushes and deletion. Pull requests are not required, since this
+is a single-author repository.
+
 ## What is built
 
 | Requirement | Where |
